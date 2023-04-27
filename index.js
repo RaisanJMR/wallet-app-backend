@@ -1,15 +1,32 @@
-const express = require('express')
 const dotenv = require('dotenv').config()
+const path = require('path')
+const express = require('express')
+const colors = require('colors')
 const connectDB = require('./config/db')
+const { errorHandler } = require('./middleware/errorHandler')
 
-const userRoute = require('./routes/userRoutes')
 
-const app = express()
-app.use(express.json())
-app.use('/api/user', userRoute)
-const PORT = process.env.PORT || 5000
 connectDB()
 
-app.listen(PORT, () => {
-  console.log(`server started on port ${PORT}`)
+const app = express()
+
+
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
+const PORT = process.env.PORT || 5000
+app.use('/api/users', require('./routes/userRoutes'))
+app.use('/api/', require('./routes/transactionRoutes'))
+app.get('/', (req, res) => {
+  res.send('api is running...')
 })
+
+app.use(errorHandler)
+
+app.listen(PORT, () =>
+  console.log(
+    `Server Running on Port: http://localhost:${PORT} at ${new Date().toLocaleString(
+      'en-US'
+    )}`.bgCyan.bold.underline
+  )
+)
