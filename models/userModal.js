@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-const bcrypt = require('bcrypt')
 
 const userSchema = new mongoose.Schema(
   {
@@ -22,12 +21,12 @@ const userSchema = new mongoose.Schema(
       min: [6, 'password must contain at least 6 numbers'],
       max: 12,
     },
-    id_type: {
+    identificationType: {
       type: String,
       required: [true, 'Please add identification type'],
       enum: ['driver license', 'passport', 'national ID'],
     },
-    id_number: {
+    identificationNumber: {
       type: String,
       required: [true, 'Please add identification number'],
       min: [6, 'at least 6 numbers'],
@@ -36,11 +35,14 @@ const userSchema = new mongoose.Schema(
     },
     balance: {
       type: Number,
-      default: 0,
+      default: 1000,
     },
     address: {
       type: String,
       required: true,
+    },
+    image: {
+      type: String,
     },
     isVerified: {
       type: Boolean,
@@ -53,6 +55,5 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
-
 
 module.exports = mongoose.model('User', userSchema)

@@ -18,7 +18,7 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      required: true,
+      // required: true,
     },
     reference: {
       type: String,

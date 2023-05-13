@@ -5,20 +5,66 @@ const colors = require('colors')
 const cors = require('cors')
 const connectDB = require('./config/db')
 const { errorHandler } = require('./middleware/errorHandler')
+const cloudinary = require('./utils/cloudinary')
+const Media = require('./models/mediaModal')
+const fileUpload = require('express-fileupload')
+const userModal = require('./models/userModal')
 
 connectDB()
 
 const app = express()
 // Enable CORS
+app.use(
+  fileUpload({
+    useTempFiles: true,
+  })
+)
 app.use(cors())
 app.options('*', cors())
-
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true }))
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 8080
 app.use('/api/users', require('./routes/userRoutes'))
 app.use('/api/', require('./routes/transactionRoutes'))
+app.use('/api/', require('./routes/requestRoutes'))
+// app.use('/api/', require('./routes/uploadRoutes'))
+
+app.post('/api/upload/:id', async (req, res) => {
+  const { id } = req.params
+  console.log(id)
+  const file = req.files.photo
+  if (
+    file.mimetype == 'image/jpeg' ||
+    file.mimetype == 'image/jpg' ||
+    file.mimetype == 'image/png'
+  ) {
+    try {
+      const uploadResponse = await cloudinary.uploader.upload(
+        file.tempFilePath,
+        {
+          folder: 'profile',
+          upload_preset: 'my_media',
+          use_filename: true,
+        }
+      )
+      const { secure_url } = uploadResponse
+      const newUser = await userModal.findByIdAndUpdate(req.params.id, {
+        image: secure_url,
+      })
+      res.status(201).json(newUser)
+    } catch (error) {
+      // console.error(error)
+      res.status(500)
+      throw new Error(error)
+    }
+  } else {
+    return res.status(400).json({
+      msg: 'only supports .jpg/.jpeg and .png',
+    })
+  }
+})
+
 app.get('/', (req, res) => {
   res.send('api is running...')
 })

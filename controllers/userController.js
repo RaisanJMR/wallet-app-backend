@@ -13,21 +13,21 @@ const register = asyncHandler(async (req, res) => {
     phone,
     password,
     address,
-    id_type,
-    id_number,
+    identificationType,
+    identificationNumber,
     isAdmin,
     isVerified,
     balance,
   } = req.body
+  // console.log(req.body)
   if (
     !name ||
     !email ||
     !password ||
     !phone ||
     !address ||
-    !id_type ||
-    !id_number ||
-    !balance
+    !identificationType ||
+    !identificationNumber
   ) {
     res.status(400)
     throw new Error('Please add all fields')
@@ -53,10 +53,10 @@ const register = asyncHandler(async (req, res) => {
     password: hashedPassword,
     phone,
     address,
-    id_type,
-    id_number,
-    isAdmin,
-    isVerified,
+    identificationType,
+    identificationNumber,
+    isAdmin: false,
+    isVerified: true,
   })
 
   if (user) {
@@ -67,8 +67,8 @@ const register = asyncHandler(async (req, res) => {
       email: user.email,
       phone: user.phone,
       address: user.address,
-      id_type: user.id_type,
-      id_number: user.id_number,
+      identificationType: user.identificationType,
+      identificationNumber: user.identificationNumber,
       isAdmin: user.isAdmin,
       isVerified: user.isVerified,
       token: generateToken(user._id),
@@ -81,19 +81,17 @@ const register = asyncHandler(async (req, res) => {
   }
 })
 
-// @desc    Register new user
+// @desc    login user
 // @route   POST /api/users/login
 // @access  Public
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body
+
   const user = await User.findOne({ email })
   if (user && (await bcrypt.compare(password, user.password))) {
-    res.status(200).send({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      token: generateToken(user._id),
-    })
+    var userObj = user.toObject()
+    delete userObj.password
+    res.status(200).json({ ...userObj, token: generateToken(user._id) })
   } else {
     // 401 Unauthorized
     res.status(401)
@@ -127,17 +125,16 @@ const getUsers = asyncHandler(async (req, res) => {
 })
 
 // @desc    verify user
-// @route   GET /api/users/verify_user/:id
+// @route   GET /api/users/verify/:id
 // @access  Protect
 const verify = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id)
+  const user = await User.findByIdAndUpdate(req.params.id, {
+    isVerified: req.body.isVerified,
+  })
   if (user) {
-    user.isVerified = req.body.isVerified || user.isVerified
-    const updatedUser = await user.save()
-    res.json({
-      _id: updatedUser._id,
-      isVerified: updatedUser.isVerified,
-    })
+    res
+      .status(201)
+      .json({ _id: user._id, name: user.name, isVerified: user.isVerified })
   } else {
     res.status(404)
     throw new Error('User not found')

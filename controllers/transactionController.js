@@ -6,13 +6,18 @@ const Transaction = require('../models/transactionModal')
 // @route   POST /api/transfer
 // @access  Private
 const transferAmount = asyncHandler(async (req, res) => {
-  const { isVerified } = req.user
-  if (isVerified) {
-    const { amount, sender, receiver, type, reference, status } = req.body
+  const { amount, sender, receiver, type, reference, status } = req.body
+  const receiverUser = await User.findById(receiver)
+
+  if (req.user._id != sender || !receiverUser || req.user.isVerified != true) {
+    res.status(400)
+    throw new Error('sender not verified or loggedin or receiver not found')
+  } else {
     if (!amount || !sender || !receiver || !type || !reference || !status) {
       res.status(400)
       throw new Error('please include all fields')
     }
+
     const transfer = await Transaction.create({
       amount,
       sender,
@@ -21,6 +26,7 @@ const transferAmount = asyncHandler(async (req, res) => {
       reference,
       status,
     })
+    await transfer.save()
     // decrease the sender's balance
     await User.findByIdAndUpdate(sender, {
       $inc: { balance: -amount },
@@ -41,33 +47,33 @@ const transferAmount = asyncHandler(async (req, res) => {
         status: transfer.status,
       })
     } else {
-      res.status(400)
-      throw new Error('Invalid transaction data')
+      res.status(404)
+      throw new Error('not created transfer')
     }
-  } else {
-    res.status(400)
-    throw new Error('sender not verified')
   }
 })
 
-// @desc    verify account
-// @route   POST /api/verify
+// @desc    Transfer money(verify receiver)
+// @route   POST /api/verify-receiver
 // @access  Private
-const verifyAccount = asyncHandler(async (req, res) => {
-  const { receiver } = req.body
-  const user = await User.findOne({ _id: receiver })
-  if (user) {
-    res.status(200).send({
-      success: true,
-      msg: 'account verified',
-    })
-  } else {
-    res.status(400)
-    throw new Error('Account not verified')
+
+const verifyReceiver = asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.body.receiver })
+    if (user) {
+      res.status(200).json(user)
+    } else {
+      res.status(404)
+      throw new Error('receiver not found')
+    }
+  } catch (error) {
+    res.status(404)
+    throw new Error(error)
   }
 })
+
 // @desc    get all transactions from a user
-// @route   POST /api/all_transaction
+// @route   GET /api/all_transaction
 // @access  Private
 const getTransactions = asyncHandler(async (req, res) => {
   const { id } = req.body
@@ -77,13 +83,10 @@ const getTransactions = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .populate('sender')
     .populate('receiver')
-  // .populate('sender', 'name')
-  // .populate('receiver', 'name')
+    .populate('sender', 'name')
+    .populate('receiver', 'name')
   if (transactions) {
-    res.status(200).send({
-      data: transactions,
-      success: true,
-    })
+    res.status(200).send(transactions)
   } else {
     res.status(400)
     throw new Error('transaction not found')
@@ -119,7 +122,7 @@ const deposit = asyncHandler(async (req, res) => {
 
 module.exports = {
   transferAmount,
-  verifyAccount,
   getTransactions,
+  verifyReceiver,
   deposit,
 }
