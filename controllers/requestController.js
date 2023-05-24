@@ -6,11 +6,13 @@ const User = require('../models/userModal')
 // @desc    send request to another user
 // @route   POST /api/request
 // @access  Private
+
 const requestAmount = asyncHandler(async (req, res) => {
   const { receiver, amount, description } = req.body
-  if (req.user._id == receiver) {
+  const moneyreceiver = await User.findById(receiver)
+  if (req.user._id == receiver || !moneyreceiver) {
     res.status(400)
-    throw new Error('request not send, sender and receiver same')
+    throw new Error('request not send')
   } else {
     try {
       if (!receiver || !amount || !description) {
@@ -49,6 +51,35 @@ const getAllRequest = asyncHandler(async (req, res) => {
   } catch (error) {
     res.status(404)
     throw new Error(error)
+  }
+})
+
+const getRequestSendTransaction = asyncHandler(async (req, res) => {
+  const requests = await Request.find({ sender: req.user._id })
+    .sort({ createdAt: -1 })
+    .populate([
+      { path: 'sender', select: 'name image' },
+      { path: 'receiver', select: 'name image' },
+    ])
+  if (requests) {
+    res.status(200).json(requests)
+  } else {
+    res.status(400)
+    throw new Error('no requests send')
+  }
+})
+const getRequestReceivedTransaction = asyncHandler(async (req, res) => {
+  const requests = await Request.find({ receiver: req.user._id })
+    .sort({ createdAt: -1 })
+    .populate([
+      { path: 'sender', select: 'name image' },
+      { path: 'receiver', select: 'name image' },
+    ])
+  if (requests) {
+    res.status(200).json(requests)
+  } else {
+    res.status(400)
+    throw new Error('no requests received')
   }
 })
 
@@ -95,4 +126,6 @@ module.exports = {
   requestAmount,
   getAllRequest,
   updateRequestStats,
+  getRequestSendTransaction,
+  getRequestReceivedTransaction,
 }

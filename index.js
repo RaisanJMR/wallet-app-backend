@@ -52,7 +52,7 @@ app.post('/api/upload/:id', async (req, res) => {
       const newUser = await userModal.findByIdAndUpdate(req.params.id, {
         image: secure_url,
       })
-      res.status(201).json(newUser)
+      res.status(201).json({ ...newUser, image: secure_url })
     } catch (error) {
       // console.error(error)
       res.status(500)

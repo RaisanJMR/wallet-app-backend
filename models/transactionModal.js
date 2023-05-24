@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-
 const transactionSchema = new mongoose.Schema(
   {
     amount: {
@@ -16,17 +15,19 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       ref: 'User',
     },
-    type: {
+    transactionType: {
       type: String,
-      // required: true,
+      required: true,
+      default: 'payment',
+      enum: ['payment', 'transfer', 'deposit', 'refund'],
+    },
+    transactionId: {
+      type: String,
     },
     reference: {
       type: String,
       required: true,
-    },
-    status: {
-      type: String,
-      required: true,
+      enum: ['transaction ID', 'payment reference'],
     },
   },
   { timestamps: true }

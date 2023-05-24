@@ -1,19 +1,20 @@
 const asyncHandler = require('express-async-handler')
 const User = require('../models/userModal')
 const Transaction = require('../models/transactionModal')
+const crypto = require('crypto')
 
 // @desc    Transfer money
 // @route   POST /api/transfer
 // @access  Private
 const transferAmount = asyncHandler(async (req, res) => {
-  const { amount, sender, receiver, type, reference, status } = req.body
+  const { amount, sender, receiver, transactionType, reference } = req.body
   const receiverUser = await User.findById(receiver)
 
   if (req.user._id != sender || !receiverUser || req.user.isVerified != true) {
     res.status(400)
     throw new Error('sender not verified or loggedin or receiver not found')
   } else {
-    if (!amount || !sender || !receiver || !type || !reference || !status) {
+    if (!amount || !sender || !receiver || !transactionType || !reference) {
       res.status(400)
       throw new Error('please include all fields')
     }
@@ -22,9 +23,9 @@ const transferAmount = asyncHandler(async (req, res) => {
       amount,
       sender,
       receiver,
-      type,
+      transactionType,
       reference,
-      status,
+      transactionId: crypto.randomBytes(5).toString('hex'),
     })
     await transfer.save()
     // decrease the sender's balance
@@ -42,9 +43,9 @@ const transferAmount = asyncHandler(async (req, res) => {
         amount: transfer.amount,
         sender: transfer.sender,
         receiver: transfer.receiver,
-        type: transfer.type,
+        transactionType: transfer.transactionType,
         reference: transfer.reference,
-        status: transfer.status,
+        transactionId: transfer.transactionId,
       })
     } else {
       res.status(404)
@@ -76,20 +77,51 @@ const verifyReceiver = asyncHandler(async (req, res) => {
 // @route   GET /api/all_transaction
 // @access  Private
 const getTransactions = asyncHandler(async (req, res) => {
-  const { id } = req.body
+  const { id } = req.params
+  console.log(id)
   const transactions = await Transaction.find({
     $or: [{ sender: id }, { receiver: id }],
   })
     .sort({ createdAt: -1 })
-    .populate('sender')
-    .populate('receiver')
-    .populate('sender', 'name')
-    .populate('receiver', 'name')
+    .populate([
+      { path: 'sender', select: 'name image' },
+      { path: 'receiver', select: 'name image' },
+    ])
   if (transactions) {
     res.status(200).send(transactions)
   } else {
     res.status(400)
     throw new Error('transaction not found')
+  }
+})
+
+const getMoneySendTransactions = asyncHandler(async (req, res) => {
+  const transactions = await Transaction.find({ sender: req.user._id })
+    .sort({ createdAt: -1 })
+    .populate([
+      { path: 'sender', select: 'name image' },
+      { path: 'receiver', select: 'name image' },
+    ])
+  if (transactions) {
+    res.status(200).send(transactions)
+  } else {
+    res.status(400)
+    throw new Error('transactions not found')
+  }
+})
+
+const getMoneyReceiveTransactions = asyncHandler(async (req, res) => {
+  const transactions = await Transaction.find({ receiver: req.user._id })
+    .sort({ createdAt: -1 })
+    .populate([
+      { path: 'sender', select: 'name image' },
+      { path: 'receiver', select: 'name image' },
+    ])
+  if (transactions) {
+    res.status(200).send(transactions)
+  } else {
+    res.status(400)
+    throw new Error('transactions not found')
   }
 })
 
@@ -99,7 +131,6 @@ const getTransactions = asyncHandler(async (req, res) => {
 const deposit = asyncHandler(async (req, res) => {
   const { amount } = req.body
   const user = await User.findById(req.user._id)
-  console.log(user._id)
   if (user) {
     const transaction = new Transaction({
       sender: user._id,
@@ -124,5 +155,7 @@ module.exports = {
   transferAmount,
   getTransactions,
   verifyReceiver,
+  getMoneySendTransactions,
+  getMoneyReceiveTransactions,
   deposit,
 }

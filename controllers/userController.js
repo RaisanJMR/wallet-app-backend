@@ -116,8 +116,13 @@ const currentUser = asyncHandler(async (req, res) => {
 // @access  Protect
 const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find()
-  if (users) {
-    res.status(200).json(users)
+
+  let newUsers = users.filter((user) => {
+    return user._id.toString() !== req.user._id.toString()
+  })
+
+  if (newUsers) {
+    res.status(200).json(newUsers)
   } else {
     res.status(404)
     throw new Error('User not found')
