@@ -4,10 +4,12 @@ const requestSchema = new mongoose.Schema(
   {
     sender: {
       type: mongoose.Schema.Types.ObjectId,
+      required: true,
       ref: 'User',
     },
     receiver: {
       type: mongoose.Schema.Types.ObjectId,
+      required: true,
       ref: 'User',
     },
     amount: {
@@ -21,7 +23,7 @@ const requestSchema = new mongoose.Schema(
     status: {
       type: String,
       default: 'pending',
-      enum: ['pending', 'accept', 'cancel'],
+      enum: ['pending', 'accepted', 'cancel'],
     },
   },
   {

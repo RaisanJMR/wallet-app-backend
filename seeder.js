@@ -1,9 +1,12 @@
 const mongoose = require('mongoose')
 const dotenv = require('dotenv').config()
-const fs  = require('fs')
+const fs = require('fs')
 const path = require('path')
 const colors = require('colors')
-const User = require('./models/userModal')
+// const User = require('./models/userModal')
+// const User = require('./models/userModal')
+const Request = require('./models/requestModal')
+const Transaction = require('./models/transactionModal')
 const connectDB = require('./config/db')
 
 connectDB()
@@ -28,7 +31,8 @@ const importData = async () => {
 
 const destroyData = async () => {
   try {
-    await User.deleteMany()
+    await Request.deleteMany()
+    await Transaction.deleteMany()
     console.log('Data Destroyed!'.red.inverse)
     process.exit()
   } catch (error) {

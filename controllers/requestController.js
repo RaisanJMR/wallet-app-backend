@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler')
 const Request = require('../models/requestModal')
 const Transaction = require('../models/transactionModal')
 const User = require('../models/userModal')
+const crypto = require('crypto')
 
 // @desc    send request to another user
 // @route   POST /api/request
@@ -87,34 +88,40 @@ const getRequestReceivedTransaction = asyncHandler(async (req, res) => {
 // @route   POST /api/update-request-status
 // @access  Private
 const updateRequestStats = asyncHandler(async (req, res) => {
-  const { _id, sender, receiver, amount, description, status } = req.body
-
-  console.table([_id, sender, receiver, amount, description, status])
+  const { _id, sender, receiver, amount, transactionType, reference, status } =
+    req.body
 
   try {
     if (status === 'accepted') {
-      const transaction = new Transaction({
-        sender: receiver,
-        receiver: sender,
+      const transaction = await Transaction.create({
+        sender: sender,
+        receiver: receiver,
         amount: amount,
-        reference: description,
-        status: 'success',
+        transactionType: transactionType,
+        transactionId: crypto.randomBytes(5).toString('hex'),
+        reference: reference,
       })
-      await transaction.save()
+
+      // await transaction.save()
+      
       // deduct the amount from the sender
       await User.findByIdAndUpdate(sender, {
-        $inc: { balance: amount },
+        $inc: { balance: -amount },
       })
 
       // add the amount to the receiver
       await User.findByIdAndUpdate(receiver, {
-        $inc: { balance: -amount },
+        $inc: { balance: amount },
       })
       res.status(201).json(transaction)
 
-      await Request.findByIdAndUpdate(_id, {
-        status: status,
-      })
+      await Request.findByIdAndUpdate(
+        _id,
+        {
+          status: status,
+        },
+        { new: true }
+      )
     }
   } catch (error) {
     res.status(404)
